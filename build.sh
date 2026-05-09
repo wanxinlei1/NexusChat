@@ -15,6 +15,10 @@ if [ -z "$JAVA_HOME" ]; then
         export JAVA_HOME="/usr/lib/jvm/java-17-openjdk"
     elif [ -d "$HOME/Android/Sdk/jdk" ]; then
         export JAVA_HOME="$HOME/Android/Sdk/jdk"
+    elif [ -d "$HOME/.local/share/mise/installs/java/17.0.2" ]; then
+        export JAVA_HOME="$HOME/.local/share/mise/installs/java/17.0.2"
+    elif [ -d "/root/.local/share/mise/installs/java/17.0.2" ]; then
+        export JAVA_HOME="/root/.local/share/mise/installs/java/17.0.2"
     else
         echo "Java 17 not found. Please install JDK 17 and set JAVA_HOME"
         exit 1
@@ -30,6 +34,8 @@ if [ -z "$ANDROID_HOME" ] && [ -z "$ANDROID_SDK_ROOT" ]; then
         export ANDROID_HOME="$HOME/Android/Sdk"
     elif [ -d "/usr/local/android-sdk" ]; then
         export ANDROID_HOME="/usr/local/android-sdk"
+    elif [ -d "/opt/android-sdk" ]; then
+        export ANDROID_HOME="/opt/android-sdk"
     else
         echo "Android SDK not found. Please install Android SDK"
         echo "Download from: https://developer.android.com/studio"
