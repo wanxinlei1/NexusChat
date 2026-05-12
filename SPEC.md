@@ -1,8 +1,8 @@
-# AI Chat - Android 应用规范
+# NexusChat - Android 应用规范
 
 ## 1. 项目概述
 
-**项目名称**: AI Chat
+**项目名称**: NexusChat
 **项目类型**: 原生 Android 应用
 **核心功能**: 一款支持用户自定义 API 密钥和端点的 AI 对话应用，让用户可以连接自己的 AI 服务进行智能对话
 

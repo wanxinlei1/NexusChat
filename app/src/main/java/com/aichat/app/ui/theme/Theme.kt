@@ -25,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun AIChatTheme(
+fun NexusChatTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = DarkColorScheme

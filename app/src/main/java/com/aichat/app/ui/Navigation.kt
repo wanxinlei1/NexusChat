@@ -17,7 +17,7 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun AIChatNavigation(
+fun NexusChatNavigation(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()

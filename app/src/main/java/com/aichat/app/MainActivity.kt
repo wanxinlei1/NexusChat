@@ -7,8 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.aichat.app.ui.AIChatNavigation
-import com.aichat.app.ui.theme.AIChatTheme
+import com.aichat.app.ui.NexusChatNavigation
+import com.aichat.app.ui.theme.NexusChatTheme
 import com.aichat.app.ui.theme.Background
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -18,12 +18,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AIChatTheme {
+            NexusChatTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = Background
                 ) {
-                    AIChatNavigation()
+                    NexusChatNavigation()
                 }
             }
         }

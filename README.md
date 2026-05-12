@@ -1,4 +1,4 @@
-# AI Chat - Android 应用
+# NexusChat - Android 应用
 
 一个支持自定义 API 密钥和端点的 AI 对话应用。
 

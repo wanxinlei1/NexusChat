@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AIChat"
+rootProject.name = "NexusChat"
 include(":app")
