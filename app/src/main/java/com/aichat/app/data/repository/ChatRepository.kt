@@ -23,11 +23,16 @@ class ChatRepository @Inject constructor(
         settingsDataStore.saveApiConfig(config)
     }
 
+    data class SendResult(
+        val content: String,
+        val reasoningContent: String? = null
+    )
+
     suspend fun sendMessage(
         messages: List<ChatMessage>,
         config: ApiConfig,
         context: Context
-    ): Result<String> {
+    ): Result<SendResult> {
         return try {
             val apiService = retrofitClient.createChatApiService(config.endpoint)
 
@@ -60,7 +65,13 @@ class ChatRepository @Inject constructor(
                 messages = apiMessages
             )
             val response = apiService.chat("Bearer ${config.apiKey}", request)
-            Result.success(response.choices.first().message.content)
+            val msg = response.choices.first().message
+            Result.success(
+                SendResult(
+                    content = msg.content,
+                    reasoningContent = msg.reasoningContent
+                )
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }

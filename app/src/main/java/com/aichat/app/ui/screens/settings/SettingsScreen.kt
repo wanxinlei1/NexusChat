@@ -145,6 +145,34 @@ fun SettingsScreen(
                 colors = textFieldColors()
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 提供商预设
+            Text(
+                text = "快速配置",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SettingsViewModel.ProviderPreset.entries.forEach { preset ->
+                    OutlinedButton(
+                        onClick = { viewModel.applyPreset(preset) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = preset.label,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             uiState.error?.let { error ->

@@ -5,7 +5,8 @@ data class ChatMessage(
     val content: String,
     val isUser: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
-    val imageUri: String? = null   // 本地图片 URI，非空时表示包含图片
+    val imageUri: String? = null,              // 本地图片 URI
+    val reasoningContent: String? = null       // 思考过程（千问/DeepSeek 思考模型）
 )
 
 data class ApiConfig(

@@ -36,7 +36,9 @@ data class Choice(
 )
 
 data class ResponseMessage(
-    val content: String
+    val content: String,
+    @SerializedName("reasoning_content")
+    val reasoningContent: String? = null
 )
 
 /**

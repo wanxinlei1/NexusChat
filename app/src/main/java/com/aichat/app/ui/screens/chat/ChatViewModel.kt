@@ -83,7 +83,11 @@ class ChatViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = { response ->
-                    val aiMessage = ChatMessage(content = response, isUser = false)
+                    val aiMessage = ChatMessage(
+                        content = response.content,
+                        isUser = false,
+                        reasoningContent = response.reasoningContent
+                    )
                     _uiState.value = _uiState.value.copy(
                         messages = _uiState.value.messages + aiMessage,
                         isLoading = false

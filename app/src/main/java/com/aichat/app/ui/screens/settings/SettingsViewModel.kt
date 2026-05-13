@@ -78,6 +78,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    enum class ProviderPreset(
+        val label: String,
+        val endpoint: String,
+        val model: String
+    ) {
+        QWEN("千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
+        DEEPSEEK("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
+        OPENAI("OpenAI", "https://api.openai.com/v1", "gpt-3.5-turbo")
+    }
+
+    fun applyPreset(preset: ProviderPreset) {
+        _uiState.value = _uiState.value.copy(
+            endpoint = preset.endpoint,
+            model = preset.model,
+            error = null
+        )
+    }
+
     fun testConnection() {
         val state = _uiState.value
         if (state.endpoint.isBlank() || state.apiKey.isBlank()) {

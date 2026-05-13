@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +51,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -247,6 +251,7 @@ fun ChatScreen(
 @Composable
 private fun MessageBubble(message: ChatMessage) {
     val isUser = message.isUser
+    var showReasoning by remember { mutableStateOf(false) }
 
     Column(
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
@@ -262,6 +267,38 @@ private fun MessageBubble(message: ChatMessage) {
                     .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.FillWidth
             )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+
+        // 思考过程（千问/DeepSeek 思考模型）
+        if (!isUser && !message.reasoningContent.isNullOrBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 280.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AIBubble.copy(alpha = 0.6f))
+                        .clickable { showReasoning = !showReasoning }
+                        .padding(10.dp)
+                ) {
+                    Text(
+                        text = if (showReasoning) "💭 思考过程 ▲" else "💭 思考过程 ▼",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                    )
+                    AnimatedVisibility(visible = showReasoning) {
+                        Text(
+                            text = message.reasoningContent!!,
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(4.dp))
         }
 
