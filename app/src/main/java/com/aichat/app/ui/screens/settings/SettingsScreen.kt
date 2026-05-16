@@ -46,9 +46,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.aichat.app.ui.theme.Background
-import com.aichat.app.ui.theme.Primary
-import com.aichat.app.ui.theme.Success
 
 @Composable
 fun SettingsScreen(
@@ -57,69 +54,57 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
+    val cs = MaterialTheme.colorScheme
 
     LaunchedEffect(uiState.isSaved) {
-        if (uiState.isSaved) {
-            onNavigateToChat()
-        }
+        if (uiState.isSaved) onNavigateToChat()
     }
 
-    Scaffold(
-        containerColor = Background
-    ) { padding ->
+    Scaffold(containerColor = cs.background) { padding ->
         Column(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "⚙️ NexusChat",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Spacer(Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Text("⚙️ 设置", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = cs.onBackground)
+            Spacer(Modifier.height(4.dp))
+            Text("配置 API 连接", fontSize = 14.sp, color = cs.onSurfaceVariant)
 
-            Text(
-                text = "配置您的 API 设置",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(28.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
-
+            // ── Endpoint ─────────────────────────────────
             OutlinedTextField(
                 value = uiState.endpoint,
                 onValueChange = viewModel::updateEndpoint,
                 label = { Text("API Endpoint") },
                 placeholder = { Text("https://api.openai.com/v1") },
-                leadingIcon = {
-                    Icon(Icons.Default.Link, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Link, null, tint = cs.onSurfaceVariant) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                colors = textFieldColors()
+                shape = RoundedCornerShape(12.dp),
+                colors = fieldColors(cs)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
+            // ── API Key ──────────────────────────────────
             OutlinedTextField(
                 value = uiState.apiKey,
                 onValueChange = viewModel::updateApiKey,
                 label = { Text("API Key") },
                 placeholder = { Text("sk-...") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.Lock, null, tint = cs.onSurfaceVariant) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (passwordVisible) "隐藏密钥" else "显示密钥"
+                            null,
+                            tint = cs.onSurfaceVariant
                         )
                     }
                 },
@@ -127,132 +112,93 @@ fun SettingsScreen(
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                colors = textFieldColors()
+                shape = RoundedCornerShape(12.dp),
+                colors = fieldColors(cs)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
+            // ── Model ────────────────────────────────────
             OutlinedTextField(
                 value = uiState.model,
                 onValueChange = viewModel::updateModel,
-                label = { Text("模型 (可选)") },
+                label = { Text("模型") },
                 placeholder = { Text("gpt-3.5-turbo") },
-                leadingIcon = {
-                    Icon(Icons.Default.ModelTraining, contentDescription = null)
-                },
+                leadingIcon = { Icon(Icons.Default.ModelTraining, null, tint = cs.onSurfaceVariant) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = textFieldColors()
+                shape = RoundedCornerShape(12.dp),
+                colors = fieldColors(cs)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // 提供商预设
-            Text(
-                text = "快速配置",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            // ── Presets ──────────────────────────────────
+            Text("快速配置", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = cs.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
                 SettingsViewModel.ProviderPreset.entries.forEach { preset ->
                     OutlinedButton(
                         onClick = { viewModel.applyPreset(preset) },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary)
                     ) {
-                        Text(
-                            text = preset.label,
-                            fontSize = 13.sp
-                        )
+                        Text(preset.label, fontSize = 13.sp)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
-            uiState.error?.let { error ->
+            // ── Status ───────────────────────────────────
+            uiState.error?.let {
+                Text(it, color = cs.error, fontSize = 13.sp, modifier = Modifier.padding(bottom = 8.dp))
+            }
+            uiState.testSuccess?.let { ok ->
                 Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    if (ok) "✓ 连接成功" else "✗ 连接失败",
+                    color = if (ok) cs.primary else cs.error,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
 
-            uiState.testSuccess?.let { success ->
-                Text(
-                    text = if (success) "✓ 连接成功!" else "✗ 连接失败",
-                    color = if (success) Success else MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            // ── Buttons ──────────────────────────────────
+            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = viewModel::testConnection,
                     modifier = Modifier.weight(1f),
                     enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Primary
-                    )
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = Primary
-                        )
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = cs.primary)
                     } else {
                         Text("测试连接")
                     }
                 }
-
                 Button(
                     onClick = viewModel::saveConfig,
                     modifier = Modifier.weight(1f),
                     enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Primary
-                    )
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = cs.primary)
                 ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("保存并开始")
-                    }
+                    Text("保存并开始")
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "请确保 API Key 安全，仅用于本地配置",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp)
-            )
         }
     }
 }
 
 @Composable
-private fun textFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Primary,
-    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-    focusedLabelColor = Primary,
-    cursorColor = Primary,
-    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-)
+private fun fieldColors(cs: androidx.compose.material3.ColorScheme) =
+    OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = cs.primary,
+        unfocusedBorderColor = cs.outline,
+        focusedContainerColor = cs.surface,
+        unfocusedContainerColor = cs.surface,
+        cursorColor = cs.primary,
+        focusedLabelColor = cs.primary,
+    )

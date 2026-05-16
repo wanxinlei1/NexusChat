@@ -3,8 +3,10 @@ package com.aichat.app.ui.screens.chat
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,15 +32,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -66,11 +63,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.aichat.app.domain.model.ChatMessage
-import com.aichat.app.ui.theme.AIBubble
-import com.aichat.app.ui.theme.Background
-import com.aichat.app.ui.theme.Primary
-import com.aichat.app.ui.theme.Surface
-import com.aichat.app.ui.theme.UserBubble
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +73,7 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val cs = MaterialTheme.colorScheme
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -102,35 +95,23 @@ fun ChatScreen(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = cs.background,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "NexusChat",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
+                    Text("NexusChat", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                 },
                 actions = {
                     IconButton(onClick = viewModel::clearMessages) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "清空对话",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.Default.DeleteOutline, "清空对话", tint = cs.onSurfaceVariant)
                     }
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "设置",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        Icon(Icons.Default.Settings, "设置", tint = cs.onSurfaceVariant)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = cs.surface,
+                    titleContentColor = cs.onSurface
                 )
             )
         },
@@ -144,28 +125,23 @@ fun ChatScreen(
         ) {
             if (uiState.messages.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("💬", fontSize = 56.sp)
+                        Spacer(Modifier.height(12.dp))
                         Text(
-                            text = "🤖",
-                            fontSize = 64.sp
+                            "开始对话",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = cs.onBackground
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "开始对话吧",
-                            fontSize = 18.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "输入消息或上传图片与 AI 交流",
+                            "输入消息或上传图片",
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            color = cs.onSurfaceVariant
                         )
                     }
                 }
@@ -173,70 +149,60 @@ fun ChatScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.messages) { message ->
-                        MessageBubble(message = message)
+                        MessageBubble(message)
                     }
-
                     if (uiState.isLoading) {
                         item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Primary
-                                )
+                            Row(Modifier.fillMaxWidth(), Arrangement.Start) {
+                                Box(
+                                    Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(cs.surfaceVariant)
+                                        .padding(12.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = cs.primary
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // 图片预览
+            // image preview
             uiState.selectedImageUri?.let { uri ->
-                Box(
-                    modifier = Modifier
+                Row(
+                    Modifier
                         .fillMaxWidth()
-                        .background(Surface)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .background(cs.surface)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = rememberAsyncImagePainter(uri),
-                            contentDescription = "选中的图片",
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "点击发送上传图片",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        IconButton(
-                            onClick = viewModel::clearImage,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "移除图片",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                    Image(
+                        rememberAsyncImagePainter(uri),
+                        null,
+                        Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("图片已选择", fontSize = 13.sp, color = cs.onSurfaceVariant)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = viewModel::clearImage, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, "移除", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
                 }
             }
 
-            MessageInput(
+            ChatInputBar(
                 text = uiState.inputText,
                 onTextChange = viewModel::updateInputText,
                 onSend = viewModel::sendMessage,
@@ -250,81 +216,79 @@ fun ChatScreen(
 
 @Composable
 private fun MessageBubble(message: ChatMessage) {
+    val cs = MaterialTheme.colorScheme
     val isUser = message.isUser
     var showReasoning by remember { mutableStateOf(false) }
+
+    val bubbleColor = if (isUser) cs.primary else cs.surfaceVariant
+    val textColor   = if (isUser) cs.onPrimary else cs.onSurface
+    val shape = RoundedCornerShape(
+        topStart = 16.dp, topEnd = 16.dp,
+        bottomStart = if (isUser) 16.dp else 4.dp,
+        bottomEnd   = if (isUser) 4.dp else 16.dp
+    )
 
     Column(
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // 图片（如果有）
         message.imageUri?.let { uri ->
             Image(
-                painter = rememberAsyncImagePainter(uri),
-                contentDescription = "上传的图片",
-                modifier = Modifier
-                    .widthIn(max = 240.dp)
+                rememberAsyncImagePainter(uri),
+                null,
+                Modifier
+                    .widthIn(max = 220.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.FillWidth
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(Modifier.height(4.dp))
         }
 
-        // 思考过程（千问/DeepSeek 思考模型）
         if (!isUser && !message.reasoningContent.isNullOrBlank()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Column(
-                    modifier = Modifier
+            Row(Modifier.fillMaxWidth(), Arrangement.Start) {
+                Box(
+                    Modifier
                         .widthIn(max = 280.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(AIBubble.copy(alpha = 0.6f))
+                        .background(cs.surfaceVariant.copy(alpha = 0.7f))
                         .clickable { showReasoning = !showReasoning }
                         .padding(10.dp)
                 ) {
-                    Text(
-                        text = if (showReasoning) "💭 思考过程 ▲" else "💭 思考过程 ▼",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                    )
-                    AnimatedVisibility(visible = showReasoning) {
+                    Column {
                         Text(
-                            text = message.reasoningContent!!,
-                            fontSize = 13.sp,
-                            lineHeight = 19.sp,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                            if (showReasoning) "💭 思考过程 ▲" else "💭 思考过程 ▶",
+                            fontSize = 12.sp,
+                            color = cs.onSurfaceVariant
                         )
+                        AnimatedVisibility(showReasoning) {
+                            Text(
+                                message.reasoningContent,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = cs.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(Modifier.height(4.dp))
         }
 
-        // 文字气泡
         if (message.content.isNotBlank()) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+                Modifier.fillMaxWidth(),
+                if (isUser) Arrangement.End else Arrangement.Start
             ) {
                 Box(
-                    modifier = Modifier
+                    Modifier
                         .widthIn(max = 280.dp)
-                        .clip(
-                            RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = if (isUser) 16.dp else 4.dp,
-                                bottomEnd = if (isUser) 4.dp else 16.dp
-                            )
-                        )
-                        .background(if (isUser) UserBubble else AIBubble)
-                        .padding(12.dp)
+                        .clip(shape)
+                        .background(bubbleColor)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Text(
-                        text = message.content,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        message.content,
+                        color = textColor,
                         fontSize = 15.sp,
                         lineHeight = 22.sp
                     )
@@ -335,7 +299,7 @@ private fun MessageBubble(message: ChatMessage) {
 }
 
 @Composable
-private fun MessageInput(
+private fun ChatInputBar(
     text: String,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -343,78 +307,71 @@ private fun MessageInput(
     enabled: Boolean,
     isLoading: Boolean
 ) {
+    val cs = MaterialTheme.colorScheme
     val canSend = enabled && (text.isNotBlank() || isLoading)
 
     Row(
-        modifier = Modifier
+        Modifier
             .fillMaxWidth()
-            .background(Surface)
+            .background(cs.surface)
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 图片选择按钮
-        IconButton(
-            onClick = onPickImage,
-            enabled = enabled,
-            modifier = Modifier.size(44.dp)
-        ) {
+        IconButton(onClick = onPickImage, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(
-                Icons.Default.AddPhotoAlternate,
-                contentDescription = "上传图片",
-                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.size(24.dp)
+                Icons.Default.AddPhotoAlternate, "上传图片",
+                tint = if (enabled) cs.onSurfaceVariant else cs.onSurfaceVariant.copy(alpha = 0.3f),
+                modifier = Modifier.size(22.dp)
             )
         }
 
-        OutlinedTextField(
-            value = text,
-            onValueChange = onTextChange,
-            modifier = Modifier.weight(1f),
-            placeholder = {
-                Text("输入消息或上传图片...")
-            },
-            enabled = enabled,
-            maxLines = 4,
-            shape = RoundedCornerShape(24.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedContainerColor = Background,
-                unfocusedContainerColor = Background,
-                cursorColor = Primary
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            keyboardActions = KeyboardActions(onSend = { onSend() })
-        )
+        Box(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(22.dp))
+                .background(cs.surfaceVariant)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            androidx.compose.foundation.text.BasicTextField(
+                value = text,
+                onValueChange = onTextChange,
+                enabled = enabled,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = cs.onSurface),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { onSend() }),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    if (text.isEmpty()) {
+                        Text("输入消息...", color = cs.onSurfaceVariant, fontSize = 15.sp)
+                    }
+                    inner()
+                }
+            )
+        }
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(Modifier.width(6.dp))
 
-        IconButton(
-            onClick = onSend,
-            enabled = canSend,
-            modifier = Modifier
-                .size(44.dp)
+        Box(
+            Modifier
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(
-                    if (canSend) Primary
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
+                .background(if (canSend) cs.primary else cs.surfaceVariant),
+            contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = cs.onPrimary)
             } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "发送",
-                    tint = if (canSend) MaterialTheme.colorScheme.onPrimary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                    onClick = onSend,
+                    enabled = canSend,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send, "发送",
+                        tint = if (canSend) cs.onPrimary else cs.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
