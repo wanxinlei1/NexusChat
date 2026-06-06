@@ -1,6 +1,7 @@
 package com.aichat.app.data.remote
 
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
@@ -10,4 +11,9 @@ interface ChatApiService {
         @Header("Authorization") auth: String,
         @Body request: ChatRequest
     ): ChatResponse
+
+    @GET("models")
+    suspend fun listModels(
+        @Header("Authorization") auth: String
+    ): ModelsResponse
 }

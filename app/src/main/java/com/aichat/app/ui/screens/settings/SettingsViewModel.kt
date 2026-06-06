@@ -2,6 +2,7 @@ package com.aichat.app.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aichat.app.data.remote.ValidationResult
 import com.aichat.app.data.repository.ChatRepository
 import com.aichat.app.domain.model.ApiConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class EditingProviderState(
-    val id: String = "",             // empty = new, non-empty = editing existing
+    val id: String = "",
     val name: String = "",
     val endpoint: String = "",
     val apiKey: String = "",
@@ -27,8 +28,15 @@ data class SettingsUiState(
     val error: String? = null,
     val testSuccess: Boolean? = null,
     val isSaved: Boolean = false,
-    // Dialog state: non-null = show edit dialog
-    val editingProvider: EditingProviderState? = null
+    // Dialog state
+    val editingProvider: EditingProviderState? = null,
+    // Validation
+    val availableModels: List<String> = emptyList(),
+    val isFetchingModels: Boolean = false,
+    val validationResult: ValidationResult? = null,
+    val isValidationInProgress: Boolean = false,
+    val keyFormatHint: String? = null,
+    val endpointFormatHint: String? = null
 )
 
 @HiltViewModel
@@ -60,7 +68,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             editingProvider = EditingProviderState(),
             testSuccess = null,
-            error = null
+            error = null,
+            availableModels = emptyList(),
+            validationResult = null,
+            keyFormatHint = null,
+            endpointFormatHint = null
         )
     }
 
@@ -74,7 +86,11 @@ class SettingsViewModel @Inject constructor(
                 model = config.model
             ),
             testSuccess = null,
-            error = null
+            error = null,
+            availableModels = emptyList(),
+            validationResult = null,
+            keyFormatHint = checkKeyFormat(config.apiKey),
+            endpointFormatHint = checkEndpointFormat(config.endpoint)
         )
     }
 
@@ -82,7 +98,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             editingProvider = null,
             testSuccess = null,
-            error = null
+            error = null,
+            availableModels = emptyList(),
+            validationResult = null,
+            keyFormatHint = null,
+            endpointFormatHint = null
         )
     }
 
@@ -98,14 +118,17 @@ class SettingsViewModel @Inject constructor(
     fun updateEditingEndpoint(endpoint: String) {
         _uiState.value = _uiState.value.copy(
             editingProvider = _uiState.value.editingProvider?.copy(endpoint = endpoint),
-            error = null
+            error = null,
+            availableModels = emptyList(),
+            endpointFormatHint = checkEndpointFormat(endpoint)
         )
     }
 
     fun updateEditingApiKey(apiKey: String) {
         _uiState.value = _uiState.value.copy(
             editingProvider = _uiState.value.editingProvider?.copy(apiKey = apiKey),
-            error = null
+            error = null,
+            keyFormatHint = checkKeyFormat(apiKey)
         )
     }
 
@@ -113,6 +136,115 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             editingProvider = _uiState.value.editingProvider?.copy(model = model)
         )
+    }
+
+    // ── Model list ──────────────────────────────────────
+
+    fun fetchModels() {
+        val edit = _uiState.value.editingProvider ?: return
+        if (edit.endpoint.isBlank() || edit.apiKey.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "请先填写 Endpoint 和 API Key")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isFetchingModels = true, error = null)
+            val result = repository.fetchModels(
+                endpoint = edit.endpoint.trim(),
+                apiKey = edit.apiKey.trim()
+            )
+            result.fold(
+                onSuccess = { models ->
+                    _uiState.value = _uiState.value.copy(
+                        isFetchingModels = false,
+                        availableModels = models
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isFetchingModels = false,
+                        error = "获取模型列表失败: ${e.message}"
+                    )
+                }
+            )
+        }
+    }
+
+    fun selectModel(model: String) {
+        _uiState.value = _uiState.value.copy(
+            editingProvider = _uiState.value.editingProvider?.copy(model = model)
+        )
+    }
+
+    // ── Key format check ────────────────────────────────
+
+    /**
+     * Returns a hint string about the key format, or null if format looks OK.
+     */
+    private fun checkKeyFormat(key: String): String? {
+        if (key.isBlank()) return null
+        return when {
+            key.startsWith("sk-") && key.length >= 20 -> null // looks valid
+            key.startsWith("sk-") && key.length < 20 -> "Key 似乎太短"
+            key.contains(" ") -> "Key 不应包含空格"
+            key.length < 10 -> "Key 格式似乎不正确"
+            else -> null // unknown format, no warning
+        }
+    }
+
+    /**
+     * Returns a hint string about the endpoint format, or null if format looks OK.
+     */
+    private fun checkEndpointFormat(url: String): String? {
+        if (url.isBlank()) return null
+        val trimmed = url.trim()
+        return when {
+            !trimmed.startsWith("http://") && !trimmed.startsWith("https://") ->
+                "URL 需要以 http:// 或 https:// 开头"
+            trimmed.startsWith("http://") ->
+                "建议使用 HTTPS 加密连接"
+            !Regex("^https://[a-zA-Z0-9][-a-zA-Z0-9.]*\\.[a-zA-Z]{2,}").containsMatchIn(trimmed) ->
+                "URL 格式似乎不正确"
+            trimmed.contains(" ") ->
+                "URL 不应包含空格"
+            else -> null // looks OK
+        }
+    }
+
+    // ── Step-by-step validation ─────────────────────────
+
+    fun validateApi() {
+        val edit = _uiState.value.editingProvider ?: return
+        if (edit.endpoint.isBlank() || edit.apiKey.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "请先填写 Endpoint 和 API Key")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isValidationInProgress = true, error = null, validationResult = null)
+            val config = ApiConfig(
+                endpoint = edit.endpoint.trim(),
+                apiKey = edit.apiKey.trim(),
+                model = edit.model.ifBlank { "gpt-3.5-turbo" }
+            )
+            val result = repository.validateApi(config)
+            result.fold(
+                onSuccess = { vr ->
+                    _uiState.value = _uiState.value.copy(
+                        isValidationInProgress = false,
+                        validationResult = vr,
+                        availableModels = vr.availableModels,
+                        testSuccess = vr.reachable && vr.authorized
+                    )
+                },
+                onFailure = { e ->
+                    _uiState.value = _uiState.value.copy(
+                        isValidationInProgress = false,
+                        error = "检测失败: ${e.message}"
+                    )
+                }
+            )
+        }
     }
 
     // ── CRUD ────────────────────────────────────────────
@@ -141,7 +273,9 @@ class SettingsViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 editingProvider = null,
-                isSaved = true
+                isSaved = true,
+                validationResult = null,
+                availableModels = emptyList()
             )
         }
     }
@@ -177,33 +311,16 @@ class SettingsViewModel @Inject constructor(
                 endpoint = preset.endpoint,
                 model = preset.model
             ),
-            error = null
+            error = null,
+            availableModels = emptyList(),
+            validationResult = null
         )
     }
 
-    // ── Test Connection ─────────────────────────────────
+    // ── Legacy: simple connection test ──────────────────
 
     fun testConnection() {
-        val edit = _uiState.value.editingProvider ?: return
-        if (edit.endpoint.isBlank() || edit.apiKey.isBlank()) {
-            _uiState.value = _uiState.value.copy(error = "请填写 API Endpoint 和 API Key")
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, testSuccess = null)
-            val config = ApiConfig(
-                endpoint = edit.endpoint.trim(),
-                apiKey = edit.apiKey.trim(),
-                model = edit.model.ifBlank { "gpt-3.5-turbo" }
-            )
-            val result = repository.testConnection(config)
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                testSuccess = result.isSuccess,
-                error = result.exceptionOrNull()?.message
-            )
-        }
+        validateApi() // delegate to enhanced validation
     }
 
     fun markSavedConsumed() {

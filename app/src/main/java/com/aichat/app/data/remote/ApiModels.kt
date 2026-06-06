@@ -78,3 +78,25 @@ class MessageAdapter : JsonSerializer<Message>, JsonDeserializer<Message> {
         return Message(role = role, content = content)
     }
 }
+
+// ── Model list ───────────────────────────────────────────
+
+data class ModelsResponse(
+    val data: List<ModelInfo>
+)
+
+data class ModelInfo(
+    val id: String,
+    val ownedBy: String? = null
+)
+
+// ── Validation result ────────────────────────────────────
+
+data class ValidationResult(
+    val reachable: Boolean = false,
+    val authorized: Boolean = false,
+    val modelValid: Boolean = false,
+    val availableModels: List<String> = emptyList(),
+    val stepErrors: List<String> = emptyList(),
+    val checkedModel: String = ""
+)
