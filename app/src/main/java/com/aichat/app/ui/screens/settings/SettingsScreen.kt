@@ -19,24 +19,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,7 +52,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -73,6 +70,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aichat.app.data.remote.ValidationResult
@@ -328,21 +326,30 @@ private fun ProviderEditDialog(
     val cs = MaterialTheme.colorScheme
     var modelDropdownExpanded by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onCancel,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        title = {
-            Text(
-                if (isEditingExisting) "编辑供应商" else "添加供应商",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 18.sp
-            )
-        },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = cs.surface)
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // ── Title ──
+                Text(
+                    if (isEditingExisting) "编辑供应商" else "添加供应商",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = cs.onSurface
+                )
+
                 // ── Name ──
                 OutlinedTextField(
                     value = editingProvider.name,
@@ -352,7 +359,7 @@ private fun ProviderEditDialog(
                     leadingIcon = { Icon(Icons.Default.Tag, null, tint = cs.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = dialogFieldColors(cs)
                 )
 
@@ -363,31 +370,14 @@ private fun ProviderEditDialog(
                     label = { Text("API Endpoint") },
                     placeholder = { Text("https://api.openai.com/v1") },
                     leadingIcon = { Icon(Icons.Default.Link, null, tint = cs.onSurfaceVariant) },
-                    trailingIcon = {
-                        if (editingProvider.endpoint.isNotBlank()) {
-                            when {
-                                endpointFormatHint != null -> Icon(
-                                    Icons.Default.WarningAmber,
-                                    contentDescription = endpointFormatHint,
-                                    tint = if (endpointFormatHint!!.contains("建议")) cs.onSurfaceVariant else cs.error.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                else -> Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "格式正确",
-                                    tint = cs.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = dialogFieldColors(cs),
+                    isError = endpointFormatHint != null && endpointFormatHint?.contains("建议") != true,
                     supportingText = endpointFormatHint?.let {
-                        { Text(it, fontSize = 12.sp, color = if (it.contains("建议")) cs.onSurfaceVariant else cs.error.copy(alpha = 0.7f)) }
+                        { Text(it, fontSize = 11.sp, color = if (it.contains("建议")) cs.onSurfaceVariant else cs.error) }
                     }
                 )
 
@@ -399,50 +389,31 @@ private fun ProviderEditDialog(
                     placeholder = { Text("sk-...") },
                     leadingIcon = { Icon(Icons.Default.Lock, null, tint = cs.onSurfaceVariant) },
                     trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Key format indicator
-                            if (editingProvider.apiKey.isNotBlank()) {
-                                when {
-                                    keyFormatHint != null -> Icon(
-                                        Icons.Default.WarningAmber,
-                                        contentDescription = keyFormatHint,
-                                        tint = cs.error.copy(alpha = 0.7f),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    else -> Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "格式正确",
-                                        tint = cs.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            IconButton(onClick = onTogglePassword) {
-                                Icon(
-                                    if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    null,
-                                    tint = cs.onSurfaceVariant
-                                )
-                            }
+                        IconButton(onClick = onTogglePassword) {
+                            Icon(
+                                if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                null,
+                                tint = cs.onSurfaceVariant
+                            )
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = dialogFieldColors(cs),
+                    isError = keyFormatHint != null,
                     supportingText = keyFormatHint?.let {
-                        { Text(it, fontSize = 12.sp, color = cs.error.copy(alpha = 0.7f)) }
+                        { Text(it, fontSize = 11.sp, color = cs.error) }
                     }
                 )
 
-                // ── Model (dropdown + fetch) ──
+                // ── Model ──
                 Row(
                     Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ExposedDropdownMenuBox(
                         expanded = modelDropdownExpanded && availableModels.isNotEmpty(),
@@ -463,7 +434,7 @@ private fun ProviderEditDialog(
                                 .fillMaxWidth()
                                 .menuAnchor(),
                             singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = dialogFieldColors(cs)
                         )
 
@@ -479,11 +450,7 @@ private fun ProviderEditDialog(
                                                 Text(model, fontSize = 13.sp)
                                                 if (model == editingProvider.model) {
                                                     Spacer(Modifier.width(8.dp))
-                                                    Icon(
-                                                        Icons.Default.Check, null,
-                                                        tint = cs.primary,
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
+                                                    Icon(Icons.Default.Check, null, tint = cs.primary, modifier = Modifier.size(16.dp))
                                                 }
                                             }
                                         },
@@ -497,39 +464,39 @@ private fun ProviderEditDialog(
                         }
                     }
 
-                    // Fetch models button
+                    // Fetch models — compact icon button, same height as text field
                     OutlinedButton(
                         onClick = {
                             onFetchModels()
                             modelDropdownExpanded = false
                         },
                         enabled = !isFetchingModels,
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(56.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                     ) {
                         if (isFetchingModels) {
-                            CircularProgressIndicator(
-                                Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = cs.primary
-                            )
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = cs.primary)
                         } else {
-                            Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
+                                Text("获取", fontSize = 10.sp, color = cs.onSurfaceVariant)
+                            }
                         }
                     }
                 }
 
                 // ── Presets ──
                 Text("快速配置", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = cs.onSurfaceVariant)
-                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
                     SettingsViewModel.ProviderPreset.entries.forEach { preset ->
                         OutlinedButton(
                             onClick = { onApplyPreset(preset) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                         ) {
-                            Text(preset.label, fontSize = 12.sp)
+                            Text(preset.label, fontSize = 13.sp)
                         }
                     }
                 }
@@ -539,13 +506,13 @@ private fun ProviderEditDialog(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .background(cs.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .padding(10.dp),
+                            .background(cs.primaryContainer.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.primary)
-                        Spacer(Modifier.width(8.dp))
-                        Text("⏳ 正在检测...", fontSize = 13.sp, color = cs.onSurfaceVariant)
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = cs.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Text("⏳ 正在检测 API 连接...", fontSize = 13.sp, color = cs.onSurfaceVariant)
                     }
                 }
 
@@ -558,40 +525,21 @@ private fun ProviderEditDialog(
                         Column(
                             Modifier
                                 .fillMaxWidth()
-                                .background(cs.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .background(cs.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            ValidationStep(
-                                label = if (vr.reachable) "✓ 网络可达" else "✗ 网络不可达",
-                                success = vr.reachable
-                            )
-                            if (vr.reachable) {
-                                ValidationStep(
-                                    label = if (vr.authorized) "✓ API Key 有效" else "✗ API Key 无效",
-                                    success = vr.authorized
-                                )
-                            }
-                            if (vr.authorized) {
-                                ValidationStep(
-                                    label = if (vr.modelValid) "✓ 模型可用 (${vr.checkedModel})"
-                                    else "⚠ 模型 \"${vr.checkedModel}\" 不在可用列表中",
-                                    success = vr.modelValid,
-                                    isWarning = !vr.modelValid
-                                )
-                            }
+                            ValidationStep("网络连接", vr.reachable)
+                            if (vr.reachable) ValidationStep("API Key 认证", vr.authorized)
+                            if (vr.authorized) ValidationStep("模型 \"${vr.checkedModel}\"", vr.modelValid)
                             vr.availableModels.takeIf { it.isNotEmpty() }?.let { models ->
+                                Spacer(Modifier.height(4.dp))
                                 Text(
-                                    "可用模型: ${models.take(5).joinToString(", ")}",
+                                    "可用模型: ${models.take(5).joinToString(", ")}${if (models.size > 5) " ..." else ""}",
                                     fontSize = 11.sp,
                                     color = cs.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 20.dp)
+                                    lineHeight = 16.sp
                                 )
-                            }
-                            vr.stepErrors.takeIf { it.isNotEmpty() }?.let { errors ->
-                                errors.forEach { err ->
-                                    Text(err, fontSize = 11.sp, color = cs.error)
-                                }
                             }
                         }
                     }
@@ -599,67 +547,64 @@ private fun ProviderEditDialog(
 
                 // ── General error ──
                 error?.let {
-                    Text(it, color = cs.error, fontSize = 13.sp)
+                    Text(it, color = cs.error, fontSize = 12.sp)
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onSave,
-                enabled = !isLoading,
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onPrimary)
-                } else {
-                    Text("保存")
-                }
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(
-                    onClick = onValidateApi,
-                    enabled = !isLoading && !isValidationInProgress,
-                    shape = RoundedCornerShape(10.dp)
+
+                // ── Action Buttons ──
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (isValidationInProgress) {
-                        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(4.dp))
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("取消")
                     }
-                    Text("🔍 全面检测", fontSize = 13.sp)
-                }
-                TextButton(onClick = onCancel) {
-                    Text("取消")
+                    OutlinedButton(
+                        onClick = onValidateApi,
+                        enabled = !isLoading && !isValidationInProgress,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("🔍 检测", fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = onSave,
+                        enabled = !isLoading,
+                        modifier = Modifier.weight(1.3f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = cs.primary)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = cs.onPrimary)
+                        } else {
+                            Text("保存")
+                        }
+                    }
                 }
             }
-        },
-        containerColor = cs.surface,
-        tonalElevation = 0.dp
-    )
+        }
+    }
 }
 
 @Composable
-private fun ValidationStep(
-    label: String,
-    success: Boolean,
-    isWarning: Boolean = false
-) {
+private fun ValidationStep(label: String, success: Boolean) {
     val cs = MaterialTheme.colorScheme
-    val color = when {
-        isWarning -> cs.error.copy(alpha = 0.8f)
-        success -> cs.primary
-        else -> cs.error
-    }
+    val color = if (success) cs.primary else cs.error
+    val icon = if (success) Icons.Default.CheckCircle else Icons.Default.CheckCircle
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            if (isWarning) Icons.Default.WarningAmber else if (success) Icons.Default.CheckCircle else Icons.Default.ErrorOutline,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(16.dp)
+        Text(
+            if (success) "✓" else "✗",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            modifier = Modifier.width(16.dp)
         )
-        Spacer(Modifier.width(6.dp))
-        Text(label, fontSize = 13.sp, color = color)
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 13.sp, color = cs.onSurface)
     }
 }
 
