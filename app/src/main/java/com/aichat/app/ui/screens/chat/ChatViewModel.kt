@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,7 +20,8 @@ data class ChatUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val apiConfig: ApiConfig? = null,
-    val selectedImageUri: String? = null   // 当前选中的图片 URI
+    val providers: List<ApiConfig> = emptyList(),
+    val selectedImageUri: String? = null
 )
 
 @HiltViewModel
@@ -37,9 +39,12 @@ class ChatViewModel @Inject constructor(
 
     private fun loadConfig() {
         viewModelScope.launch {
-            repository.apiConfig.collect { config ->
-                _uiState.value = _uiState.value.copy(apiConfig = config)
-            }
+            combine(repository.apiConfig, repository.providers) { config, providers ->
+                _uiState.value = _uiState.value.copy(
+                    apiConfig = config,
+                    providers = providers
+                )
+            }.collect { }
         }
     }
 
@@ -55,6 +60,12 @@ class ChatViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedImageUri = null)
     }
 
+    fun switchProvider(id: String) {
+        viewModelScope.launch {
+            repository.setActiveProvider(id)
+        }
+    }
+
     fun sendMessage() {
         val text = _uiState.value.inputText.trim()
         val imageUri = _uiState.value.selectedImageUri
@@ -65,7 +76,7 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             val userMessage = ChatMessage(
-                content = text.ifBlank { " " },  // 纯图片时用空格占位
+                content = text.ifBlank { " " },  // placeholder for image-only
                 isUser = true,
                 imageUri = imageUri
             )

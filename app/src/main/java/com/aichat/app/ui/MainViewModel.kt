@@ -25,8 +25,8 @@ class MainViewModel @Inject constructor(
 
     private fun checkInitialDestination() {
         viewModelScope.launch {
-            val config = repository.apiConfig.first()
-            _startDestination.value = if (config != null && config.endpoint.isNotEmpty()) {
+            val providers = repository.providers.first()
+            _startDestination.value = if (providers.isNotEmpty()) {
                 Screen.Chat.route
             } else {
                 Screen.Settings.route

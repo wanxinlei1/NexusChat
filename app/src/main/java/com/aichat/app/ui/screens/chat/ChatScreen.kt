@@ -31,10 +31,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,10 +62,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.aichat.app.domain.model.ApiConfig
 import com.aichat.app.domain.model.ChatMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,6 +80,7 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
     val cs = MaterialTheme.colorScheme
+    var providerMenuExpanded by remember { mutableStateOf(false) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -94,12 +101,83 @@ fun ChatScreen(
         }
     }
 
+    val providerName = uiState.apiConfig?.name?.ifBlank { null }
+        ?: uiState.apiConfig?.model
+        ?: "NexusChat"
+
     Scaffold(
         containerColor = cs.background,
         topBar = {
             TopAppBar(
                 title = {
-                    Text("NexusChat", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                    // Clickable provider name with dropdown
+                    Row(
+                        modifier = Modifier.clickable { providerMenuExpanded = true },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            providerName,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (uiState.providers.size > 1) {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = "切换供应商",
+                                tint = cs.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Provider switch dropdown
+                    DropdownMenu(
+                        expanded = providerMenuExpanded,
+                        onDismissRequest = { providerMenuExpanded = false }
+                    ) {
+                        uiState.providers.forEach { provider ->
+                            val isActive = provider.id == uiState.apiConfig?.id
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                provider.name.ifBlank { "未命名" },
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                provider.model,
+                                                fontSize = 12.sp,
+                                                color = cs.onSurfaceVariant
+                                            )
+                                        }
+                                        if (isActive) {
+                                            Spacer(Modifier.width(8.dp))
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = cs.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    providerMenuExpanded = false
+                                    if (!isActive) {
+                                        viewModel.switchProvider(provider.id)
+                                    }
+                                }
+                            )
+                        }
+                    }
                 },
                 actions = {
                     IconButton(onClick = viewModel::clearMessages) {

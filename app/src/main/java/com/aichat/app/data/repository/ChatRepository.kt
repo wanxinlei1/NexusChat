@@ -16,11 +16,24 @@ class ChatRepository @Inject constructor(
     private val retrofitClient: RetrofitClient,
     private val settingsDataStore: SettingsDataStore
 ) {
-    val apiConfig: Flow<ApiConfig?> = settingsDataStore.apiConfig
+    /** All saved providers */
+    val providers: Flow<List<ApiConfig>> = settingsDataStore.providers
+
+    /** Currently active provider */
+    val apiConfig: Flow<ApiConfig?> = settingsDataStore.activeProvider
+
     val isFirstLaunch: Flow<Boolean> = settingsDataStore.isFirstLaunch
 
-    suspend fun saveApiConfig(config: ApiConfig) {
-        settingsDataStore.saveApiConfig(config)
+    suspend fun saveProvider(config: ApiConfig) {
+        settingsDataStore.saveProvider(config)
+    }
+
+    suspend fun deleteProvider(id: String) {
+        settingsDataStore.deleteProvider(id)
+    }
+
+    suspend fun setActiveProvider(id: String) {
+        settingsDataStore.setActiveProvider(id)
     }
 
     data class SendResult(
@@ -36,11 +49,11 @@ class ChatRepository @Inject constructor(
         return try {
             val apiService = retrofitClient.createChatApiService(config.endpoint)
 
-            // 构建消息列表：历史消息用纯文本，最后一条用户消息可能带图片
+            // Build message list: history uses plain text, last user message may have images
             val apiMessages = messages.mapIndexed { index, msg ->
                 val isLastUserMessage = index == messages.lastIndex && msg.isUser
                 if (isLastUserMessage && msg.imageUri != null) {
-                    // 多模态消息
+                    // Multimodal message
                     val parts = mutableListOf<ContentPart>()
                     if (msg.content.isNotBlank()) {
                         parts.add(ContentPart(type = "text", text = msg.content))
@@ -54,7 +67,7 @@ class ChatRepository @Inject constructor(
                     )
                     Message(role = "user", content = parts)
                 } else {
-                    // 纯文本消息
+                    // Plain text message
                     val role = if (msg.isUser) "user" else "assistant"
                     Message(role = role, content = msg.content)
                 }

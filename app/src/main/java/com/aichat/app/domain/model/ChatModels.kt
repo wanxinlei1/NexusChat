@@ -10,6 +10,8 @@ data class ChatMessage(
 )
 
 data class ApiConfig(
+    val id: String = "",
+    val name: String = "",
     val endpoint: String,
     val apiKey: String,
     val model: String = "gpt-3.5-turbo"
