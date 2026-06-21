@@ -28,7 +28,17 @@ data class ContentPart(
 data class ImageUrl(val url: String)
 
 data class ChatResponse(
-    val choices: List<Choice>
+    val choices: List<Choice>,
+    val usage: Usage? = null
+)
+
+data class Usage(
+    @SerializedName("prompt_tokens")
+    val promptTokens: Int = 0,
+    @SerializedName("completion_tokens")
+    val completionTokens: Int = 0,
+    @SerializedName("total_tokens")
+    val totalTokens: Int = 0
 )
 
 data class Choice(

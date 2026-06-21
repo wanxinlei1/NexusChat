@@ -104,6 +104,10 @@ fun ChatScreen(
     val providerName = uiState.apiConfig?.name?.ifBlank { null }
         ?: uiState.apiConfig?.model
         ?: "NexusChat"
+    val cacheStats = uiState.cacheStats
+    val cacheRateText = if (cacheStats.totalRequests > 0) {
+        "\u26a1 ${(cacheStats.hitRate * 100).toInt()}%"
+    } else null
 
     Scaffold(
         containerColor = cs.background,
@@ -123,6 +127,15 @@ fun ChatScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false)
                         )
+                        cacheRateText?.let {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                it,
+                                fontSize = 11.sp,
+                                color = cs.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         if (uiState.providers.size > 1) {
                             Icon(
                                 Icons.Default.ArrowDropDown,
@@ -369,6 +382,33 @@ private fun MessageBubble(message: ChatMessage) {
                         color = textColor,
                         fontSize = 15.sp,
                         lineHeight = 22.sp
+                    )
+                }
+            }
+        }
+
+        // Token usage & cache indicator
+        if (!isUser && message.totalTokens > 0) {
+            Row(
+                Modifier.fillMaxWidth(),
+                Arrangement.Start
+            ) {
+                Box(
+                    Modifier
+                        .padding(top = 2.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(cs.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        buildString {
+                            append("● 输入: ${message.promptTokens} ● 输出: ${message.completionTokens}")
+                            append(" ● 总计: ${message.totalTokens}")
+                            if (message.fromCache) append(" ⚡ 缓存")
+                        },
+                        fontSize = 10.sp,
+                        color = cs.onSurfaceVariant.copy(alpha = 0.7f),
+                        letterSpacing = 0.5.sp
                     )
                 }
             }

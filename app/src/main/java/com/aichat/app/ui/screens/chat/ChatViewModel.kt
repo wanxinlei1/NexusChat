@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.aichat.app.data.repository.ChatRepository
 import com.aichat.app.domain.model.ApiConfig
 import com.aichat.app.domain.model.ChatMessage
+import com.aichat.app.data.repository.ChatRepository.CacheStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,8 @@ data class ChatUiState(
     val error: String? = null,
     val apiConfig: ApiConfig? = null,
     val providers: List<ApiConfig> = emptyList(),
-    val selectedImageUri: String? = null
+    val selectedImageUri: String? = null,
+    val cacheStats: CacheStats = CacheStats()
 )
 
 @HiltViewModel
@@ -97,11 +99,16 @@ class ChatViewModel @Inject constructor(
                     val aiMessage = ChatMessage(
                         content = response.content,
                         isUser = false,
-                        reasoningContent = response.reasoningContent
+                        reasoningContent = response.reasoningContent,
+                        promptTokens = response.promptTokens,
+                        completionTokens = response.completionTokens,
+                        totalTokens = response.totalTokens,
+                        fromCache = response.fromCache
                     )
                     _uiState.value = _uiState.value.copy(
                         messages = _uiState.value.messages + aiMessage,
-                        isLoading = false
+                        isLoading = false,
+                        cacheStats = repository.getCacheStats()
                     )
                 },
                 onFailure = { exception ->
@@ -115,7 +122,8 @@ class ChatViewModel @Inject constructor(
     }
 
     fun clearMessages() {
-        _uiState.value = _uiState.value.copy(messages = emptyList(), selectedImageUri = null)
+        repository.clearCacheStats()
+        _uiState.value = _uiState.value.copy(messages = emptyList(), selectedImageUri = null, cacheStats = CacheStats())
     }
 
     fun dismissError() {
