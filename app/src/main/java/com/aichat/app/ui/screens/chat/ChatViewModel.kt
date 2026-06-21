@@ -4,9 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aichat.app.data.repository.ChatRepository
+import com.aichat.app.data.repository.ChatRepository.CacheStats
+import com.aichat.app.data.repository.ConversationRepository
 import com.aichat.app.domain.model.ApiConfig
 import com.aichat.app.domain.model.ChatMessage
-import com.aichat.app.data.repository.ChatRepository.CacheStats
+import com.aichat.app.domain.model.Conversation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,11 +31,15 @@ data class ChatUiState(
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: ChatRepository,
+    private val conversationRepository: ConversationRepository,
     private val application: Application
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    private var currentConversationId: String? = null
+    private var currentConversationCreatedAt: Long? = null
 
     init {
         loadConfig()
@@ -68,6 +74,20 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun loadConversation(id: String) {
+        viewModelScope.launch {
+            val conv = conversationRepository.get(id) ?: return@launch
+            currentConversationId = conv.id
+            currentConversationCreatedAt = conv.createdAt
+            _uiState.value = _uiState.value.copy(
+                messages = conv.messages,
+                isLoading = false,
+                error = null,
+                cacheStats = CacheStats()
+            )
+        }
+    }
+
     fun sendMessage() {
         val text = _uiState.value.inputText.trim()
         val imageUri = _uiState.value.selectedImageUri
@@ -78,7 +98,7 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             val userMessage = ChatMessage(
-                content = text.ifBlank { " " },  // placeholder for image-only
+                content = text.ifBlank { " " },
                 isUser = true,
                 imageUri = imageUri
             )
@@ -105,16 +125,19 @@ class ChatViewModel @Inject constructor(
                         totalTokens = response.totalTokens,
                         fromCache = response.fromCache
                     )
+                    val newMessages = _uiState.value.messages + aiMessage
                     _uiState.value = _uiState.value.copy(
-                        messages = _uiState.value.messages + aiMessage,
+                        messages = newMessages,
                         isLoading = false,
                         cacheStats = repository.getCacheStats()
                     )
+                    // Auto-save conversation after each exchange
+                    autoSave(newMessages, config)
                 },
                 onFailure = { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = exception.message ?: "发送失败"
+                        error = exception.message ?: "\u53d1\u9001\u5931\u8d25"
                     )
                 }
             )
@@ -122,11 +145,41 @@ class ChatViewModel @Inject constructor(
     }
 
     fun clearMessages() {
+        val currentMessages = _uiState.value.messages
+        val config = _uiState.value.apiConfig
+        if (currentMessages.isNotEmpty() && config != null) {
+            autoSave(currentMessages, config)
+        }
+        currentConversationId = null
+        currentConversationCreatedAt = null
         repository.clearCacheStats()
         _uiState.value = _uiState.value.copy(messages = emptyList(), selectedImageUri = null, cacheStats = CacheStats())
     }
 
     fun dismissError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    private fun autoSave(messages: List<ChatMessage>, config: ApiConfig) {
+        if (messages.isEmpty() || messages.all { it.isUser }) return
+
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val id = currentConversationId ?: java.util.UUID.randomUUID().toString().also {
+                currentConversationId = it
+                currentConversationCreatedAt = now
+            }
+            val title = conversationRepository.generateTitle(messages)
+            val conversation = Conversation(
+                id = id,
+                title = title,
+                model = config.model,
+                endpoint = config.endpoint,
+                createdAt = currentConversationCreatedAt ?: now,
+                updatedAt = now,
+                messages = messages
+            )
+            conversationRepository.save(conversation)
+        }
     }
 }

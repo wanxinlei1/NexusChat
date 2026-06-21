@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -73,7 +74,9 @@ import com.aichat.app.domain.model.ChatMessage
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
+    conversationId: String? = null,
     onNavigateToSettings: () -> Unit,
+    onNavigateToHistory: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,6 +84,11 @@ fun ChatScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val cs = MaterialTheme.colorScheme
     var providerMenuExpanded by remember { mutableStateOf(false) }
+
+    // Load conversation if navigating from history
+    LaunchedEffect(conversationId) {
+        conversationId?.let { viewModel.loadConversation(it) }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -114,7 +122,6 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    // Clickable provider name with dropdown
                     Row(
                         modifier = Modifier.clickable { providerMenuExpanded = true },
                         verticalAlignment = Alignment.CenterVertically
@@ -139,14 +146,13 @@ fun ChatScreen(
                         if (uiState.providers.size > 1) {
                             Icon(
                                 Icons.Default.ArrowDropDown,
-                                contentDescription = "切换供应商",
+                                contentDescription = "\u5207\u6362\u4f9b\u5e94\u5546",
                                 tint = cs.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
 
-                    // Provider switch dropdown
                     DropdownMenu(
                         expanded = providerMenuExpanded,
                         onDismissRequest = { providerMenuExpanded = false }
@@ -161,7 +167,7 @@ fun ChatScreen(
                                     ) {
                                         Column(Modifier.weight(1f)) {
                                             Text(
-                                                provider.name.ifBlank { "未命名" },
+                                                provider.name.ifBlank { "\u672a\u547d\u540d" },
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium
                                             )
@@ -194,10 +200,13 @@ fun ChatScreen(
                 },
                 actions = {
                     IconButton(onClick = viewModel::clearMessages) {
-                        Icon(Icons.Default.DeleteOutline, "清空对话", tint = cs.onSurfaceVariant)
+                        Icon(Icons.Default.DeleteOutline, "\u6e05\u7a7a\u5bf9\u8bdd", tint = cs.onSurfaceVariant)
+                    }
+                    IconButton(onClick = onNavigateToHistory) {
+                        Icon(Icons.Default.History, "\u5386\u53f2\u8bb0\u5f55", tint = cs.onSurfaceVariant)
                     }
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, "设置", tint = cs.onSurfaceVariant)
+                        Icon(Icons.Default.Settings, "\u8bbe\u7f6e", tint = cs.onSurfaceVariant)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -223,14 +232,14 @@ fun ChatScreen(
                         Text("💬", fontSize = 56.sp)
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            "开始对话",
+                            "\u5f00\u59cb\u5bf9\u8bdd",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = cs.onBackground
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "输入消息或上传图片",
+                            "\u8f93\u5165\u6d88\u606f\u6216\u4e0a\u4f20\u56fe\u7247",
                             fontSize = 14.sp,
                             color = cs.onSurfaceVariant
                         )
@@ -285,10 +294,10 @@ fun ChatScreen(
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("图片已选择", fontSize = 13.sp, color = cs.onSurfaceVariant)
+                    Text("\u56fe\u7247\u5df2\u9009\u62e9", fontSize = 13.sp, color = cs.onSurfaceVariant)
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = viewModel::clearImage, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Close, "移除", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Close, "\u79fb\u9664", tint = cs.onSurfaceVariant, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -347,7 +356,7 @@ private fun MessageBubble(message: ChatMessage) {
                 ) {
                     Column {
                         Text(
-                            if (showReasoning) "💭 思考过程 ▲" else "💭 思考过程 ▶",
+                            if (showReasoning) "💭 \u601d\u8003\u8fc7\u7a0b ▲" else "💭 \u601d\u8003\u8fc7\u7a0b ▶",
                             fontSize = 12.sp,
                             color = cs.onSurfaceVariant
                         )
@@ -402,9 +411,9 @@ private fun MessageBubble(message: ChatMessage) {
                 ) {
                     Text(
                         buildString {
-                            append("● 输入: ${message.promptTokens} ● 输出: ${message.completionTokens}")
-                            append(" ● 总计: ${message.totalTokens}")
-                            if (message.fromCache) append(" ⚡ 缓存")
+                            append("\u25cf \u8f93\u5165: ${message.promptTokens} \u25cf \u8f93\u51fa: ${message.completionTokens}")
+                            append(" \u25cf \u603b\u8ba1: ${message.totalTokens}")
+                            if (message.fromCache) append(" \u26a1 \u7f13\u5b58")
                         },
                         fontSize = 10.sp,
                         color = cs.onSurfaceVariant.copy(alpha = 0.7f),
@@ -437,7 +446,7 @@ private fun ChatInputBar(
     ) {
         IconButton(onClick = onPickImage, enabled = enabled, modifier = Modifier.size(40.dp)) {
             Icon(
-                Icons.Default.AddPhotoAlternate, "上传图片",
+                Icons.Default.AddPhotoAlternate, "\u4e0a\u4f20\u56fe\u7247",
                 tint = if (enabled) cs.onSurfaceVariant else cs.onSurfaceVariant.copy(alpha = 0.3f),
                 modifier = Modifier.size(22.dp)
             )
@@ -460,7 +469,7 @@ private fun ChatInputBar(
                 modifier = Modifier.fillMaxWidth(),
                 decorationBox = { inner ->
                     if (text.isEmpty()) {
-                        Text("输入消息...", color = cs.onSurfaceVariant, fontSize = 15.sp)
+                        Text("\u8f93\u5165\u6d88\u606f...", color = cs.onSurfaceVariant, fontSize = 15.sp)
                     }
                     inner()
                 }
@@ -485,7 +494,7 @@ private fun ChatInputBar(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.Send, "发送",
+                        Icons.AutoMirrored.Filled.Send, "\u53d1\u9001",
                         tint = if (canSend) cs.onPrimary else cs.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
