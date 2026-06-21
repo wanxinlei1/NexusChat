@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -199,6 +200,9 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = viewModel::startNewConversation) {
+                        Icon(Icons.Default.NoteAdd, "新对话", tint = cs.onSurfaceVariant)
+                    }
                     IconButton(onClick = viewModel::clearMessages) {
                         Icon(Icons.Default.DeleteOutline, "\u6e05\u7a7a\u5bf9\u8bdd", tint = cs.onSurfaceVariant)
                     }
@@ -503,3 +507,4 @@ private fun ChatInputBar(
         }
     }
 }
+

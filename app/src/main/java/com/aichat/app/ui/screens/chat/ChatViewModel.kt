@@ -144,12 +144,21 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun clearMessages() {
+    fun startNewConversation() {
+        // Save current conversation, then start a fresh one
         val currentMessages = _uiState.value.messages
         val config = _uiState.value.apiConfig
         if (currentMessages.isNotEmpty() && config != null) {
             autoSave(currentMessages, config)
         }
+        currentConversationId = null
+        currentConversationCreatedAt = null
+        repository.clearCacheStats()
+        _uiState.value = _uiState.value.copy(messages = emptyList(), selectedImageUri = null, cacheStats = CacheStats())
+    }
+
+    fun clearMessages() {
+        // Discard current conversation without saving
         currentConversationId = null
         currentConversationCreatedAt = null
         repository.clearCacheStats()
@@ -183,3 +192,4 @@ class ChatViewModel @Inject constructor(
         }
     }
 }
+
